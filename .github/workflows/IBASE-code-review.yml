@@ -10,6 +10,11 @@ on:
       - reopened
       - ready_for_review
 
+# Required so the script can post a review back to the PR
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   collect-pr-details:
     name: Collect PR Details
@@ -19,9 +24,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # full history so we can diff the PR
+          fetch-depth: 0
 
-      # ── 1. Standard GitHub environment variables ─────────────────────────
+      # ── 1. Standard GitHub environment variables ──────────────────────────
       - name: Print GitHub environment variables
         run: |
           echo "============================================================"
@@ -41,7 +46,7 @@ jobs:
           echo "GITHUB_WORKSPACE    : $GITHUB_WORKSPACE"
           echo "============================================================"
 
-      # ── 2. PR details from the event JSON (injected by GitHub) ───────────
+      # ── 2. PR details from the event JSON ────────────────────────────────
       - name: Extract PR details from event payload
         id: pr_details
         run: |
@@ -49,7 +54,6 @@ jobs:
           echo "Event payload path: $EVENT_PATH"
           echo ""
 
-          # Parse fields with jq
           PR_NUMBER=$(jq -r '.pull_request.number'                    "$EVENT_PATH")
           PR_TITLE=$(jq -r '.pull_request.title'                      "$EVENT_PATH")
           PR_BODY=$(jq -r '.pull_request.body // "(no description)"'  "$EVENT_PATH")
@@ -98,19 +102,18 @@ jobs:
           echo "$PR_BODY"
           echo "============================================================"
 
-          # Export as step outputs for downstream steps
-          echo "pr_number=$PR_NUMBER"           >> "$GITHUB_OUTPUT"
-          echo "pr_title=$PR_TITLE"             >> "$GITHUB_OUTPUT"
-          echo "pr_author=$PR_AUTHOR"           >> "$GITHUB_OUTPUT"
-          echo "pr_base_branch=$PR_BASE_BRANCH" >> "$GITHUB_OUTPUT"
-          echo "pr_head_branch=$PR_HEAD_BRANCH" >> "$GITHUB_OUTPUT"
-          echo "pr_base_sha=$PR_BASE_SHA"       >> "$GITHUB_OUTPUT"
-          echo "pr_head_sha=$PR_HEAD_SHA"       >> "$GITHUB_OUTPUT"
-          echo "pr_additions=$PR_ADDITIONS"     >> "$GITHUB_OUTPUT"
-          echo "pr_deletions=$PR_DELETIONS"     >> "$GITHUB_OUTPUT"
+          echo "pr_number=$PR_NUMBER"               >> "$GITHUB_OUTPUT"
+          echo "pr_title=$PR_TITLE"                 >> "$GITHUB_OUTPUT"
+          echo "pr_author=$PR_AUTHOR"               >> "$GITHUB_OUTPUT"
+          echo "pr_base_branch=$PR_BASE_BRANCH"     >> "$GITHUB_OUTPUT"
+          echo "pr_head_branch=$PR_HEAD_BRANCH"     >> "$GITHUB_OUTPUT"
+          echo "pr_base_sha=$PR_BASE_SHA"           >> "$GITHUB_OUTPUT"
+          echo "pr_head_sha=$PR_HEAD_SHA"           >> "$GITHUB_OUTPUT"
+          echo "pr_additions=$PR_ADDITIONS"         >> "$GITHUB_OUTPUT"
+          echo "pr_deletions=$PR_DELETIONS"         >> "$GITHUB_OUTPUT"
           echo "pr_changed_files=$PR_CHANGED_FILES" >> "$GITHUB_OUTPUT"
 
-      # ── 3. List changed files with their diff stats ───────────────────────
+      # ── 3. Changed files diff stat ────────────────────────────────────────
       - name: List changed files
         run: |
           echo "============================================================"
@@ -120,11 +123,27 @@ jobs:
             git diff --stat ${{ steps.pr_details.outputs.pr_base_sha }}...${{ steps.pr_details.outputs.pr_head_sha }}
           echo "============================================================"
 
-      # ── 4. Summary card in the Actions UI ────────────────────────────────
+      # ── 4. Set up Python for the AI review script ─────────────────────────
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      # ── 5. Run AI review and post result back to the PR ───────────────────
+      - name: Run AI code review
+        env:
+          GITHUB_TOKEN:      ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python scripts/ai_review.py
+
+      # ── 6. Summary card in the Actions UI ────────────────────────────────
       - name: Write job summary
         run: |
           cat >> "$GITHUB_STEP_SUMMARY" << EOF
-          ## PR Review Agent — Triggered
+          ## PR Review Agent — Completed
 
           | Field | Value |
           |---|---|
@@ -134,5 +153,5 @@ jobs:
           | Changes | +${{ steps.pr_details.outputs.pr_additions }} / -${{ steps.pr_details.outputs.pr_deletions }} across ${{ steps.pr_details.outputs.pr_changed_files }} file(s) |
           | Run | [$GITHUB_RUN_ID](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID) |
 
-          > **Next phase:** AI code review will be inserted here.
+          > AI review posted as a comment on the PR.
           EOF

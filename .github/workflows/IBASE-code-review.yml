@@ -1,0 +1,17 @@
+name: AI PR Review Agent
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Print Message
+        run: echo "AI Agent Triggered"

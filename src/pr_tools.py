@@ -9,6 +9,27 @@ from pathlib import Path
 
 MAX_DIFF_CHARS = 50_000
 
+# Tiny diff for fast local testing (2 files, few lines)
+SAMPLE_DIFF = """diff --git a/src/auth.py b/src/auth.py
+index 1111111..2222222 100644
+--- a/src/auth.py
++++ b/src/auth.py
+@@ -12,6 +12,8 @@ def get_user_email(user_id: str) -> str:
+     user = db.find_user(user_id)
++    if user is None:
++        raise ValueError("User not found")
+     return user.email
+
+diff --git a/tests/test_auth.py b/tests/test_auth.py
+index 3333333..4444444 100644
+--- a/tests/test_auth.py
++++ b/tests/test_auth.py
+@@ -5,0 +6,4 @@
++def test_get_user_email_missing_user():
++    with pytest.raises(ValueError):
++        get_user_email("unknown-id")
+"""
+
 
 def _git_diff(repo_root: str, base: str, head: str) -> str:
     try:
@@ -41,6 +62,18 @@ def load_pull_request(event_path: str = "") -> dict:
     if path and Path(path).is_file():
         with open(path, encoding="utf-8") as f:
             event = json.load(f)
+        if event.get("use_sample_diff"):
+            pr = event.get("pull_request", {})
+            return {
+                "number": pr.get("number", 1),
+                "title": pr.get("title", "Sample PR"),
+                "body": pr.get("body") or "",
+                "url": pr.get("html_url", ""),
+                "author": pr.get("user", {}).get("login", ""),
+                "base_branch": pr.get("base", {}).get("ref", "main"),
+                "head_branch": pr.get("head", {}).get("ref", "sample"),
+                "diff": SAMPLE_DIFF,
+            }
         pr = event.get("pull_request", {})
         base_ref = pr.get("base", {}).get("ref", "main")
         base_sha = pr.get("base", {}).get("sha", "")

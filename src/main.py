@@ -13,10 +13,22 @@ from .agent import pr_review_agent
 
 
 async def run_review(event_path: str) -> str:
-    if event_path:
-        import os
+    import os
+    from pathlib import Path
 
+    from .pr_tools import load_pull_request
+
+    if event_path:
+        event_path = str(Path(event_path).resolve())
         os.environ["GITHUB_EVENT_PATH"] = event_path
+
+    pr = load_pull_request(event_path)
+    prompt = (
+        f"Review pull request #{pr.get('number', '?')}: {pr['title']}\n\n"
+        f"Description: {pr.get('body') or '(none)'}\n\n"
+        f"```diff\n{pr['diff']}\n```\n\n"
+        "Write Summary, Issues (file:line — problem — fix), and Verdict (approve / request changes)."
+    )
 
     runner = InMemoryRunner(agent=pr_review_agent, app_name="pr_review")
     user_id = "reviewer"
@@ -30,7 +42,7 @@ async def run_review(event_path: str) -> str:
 
     message = types.Content(
         role="user",
-        parts=[types.Part.from_text(text="Review this pull request.")],
+        parts=[types.Part.from_text(text=prompt)],
     )
 
     review_parts: list[str] = []
@@ -60,8 +72,18 @@ def main() -> None:
         default="",
         help="Write review markdown to this file (used by GitHub Actions)",
     )
+    parser.add_argument(
+        "--sample",
+        action="store_true",
+        help="Use a small simulated PR diff for fast local testing",
+    )
     args = parser.parse_args()
-    review = asyncio.run(run_review(args.event))
+    event_path = args.event
+    if args.sample and not event_path:
+        from pathlib import Path
+
+        event_path = str(Path(__file__).resolve().parent.parent / "test" / "sample-event.json")
+    review = asyncio.run(run_review(event_path))
     print(review)
     if args.output:
         from pathlib import Path

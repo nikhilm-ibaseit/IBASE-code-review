@@ -1,0 +1,13 @@
+{
+  "use_sample_diff": true,
+  "action": "opened",
+  "pull_request": {
+    "number": 1,
+    "title": "Fix login validation",
+    "body": "Adds null check before accessing user email.",
+    "html_url": "https://github.com/example/repo/pull/1",
+    "user": { "login": "naresh" },
+    "base": { "ref": "main", "sha": "abc111" },
+    "head": { "ref": "fix-login", "sha": "def222" }
+  }
+}

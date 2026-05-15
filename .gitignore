@@ -3,3 +3,6 @@ __pycache__/
 .venv/
 .env
 *.md.bak
+pr-review-local.md
+pr-review-sample.md
+test-event.json

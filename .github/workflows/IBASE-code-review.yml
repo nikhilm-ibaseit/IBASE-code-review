@@ -42,7 +42,7 @@ jobs:
           GITHUB_EVENT_PATH: ${{ github.event_path }}
           GITHUB_WORKSPACE: ${{ github.workspace }}
           OPENAI_API_BASE: ${{ secrets.OPENAI_API_BASE }}
-          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'openai/agent-strong' }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: python -m src.main --event "$GITHUB_EVENT_PATH" --output pr-review.md
 

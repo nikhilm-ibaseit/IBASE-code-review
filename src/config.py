@@ -1,4 +1,4 @@
-"""Local LLM config for LiteLLM (Ollama OpenAI-compatible API)."""
+"""LiteLLM config for OpenAI-compatible APIs (hackathon endpoint or Ollama)."""
 
 import os
 
@@ -6,9 +6,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-OPENAI_MODEL: str = os.getenv("OPENAI_MODEL") or "openai/llama3.2:3b"
-OPENAI_API_BASE: str = os.getenv("OPENAI_API_BASE") or "http://localhost:11434/v1"
-OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY") or "ollama"
+OPENAI_MODEL: str = os.getenv("OPENAI_MODEL") or "openai/agent-strong"
+OPENAI_API_BASE: str = os.getenv("OPENAI_API_BASE") or "https://9122-202-153-40-242.ngrok-free.app/v1"
+OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY") or ""
 
 
 def get_local_llm():

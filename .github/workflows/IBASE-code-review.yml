@@ -16,12 +16,12 @@ permissions:
   pull-requests: write
 
 jobs:
-  collect-pr-details:
-    name: Collect PR Details
+  pr-review:
+    name: PR Code Review
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout PR head
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -116,12 +116,7 @@ jobs:
       # ── 3. Changed files diff stat ────────────────────────────────────────
       - name: List changed files
         run: |
-          echo "============================================================"
-          echo "  CHANGED FILES (diff stat)"
-          echo "============================================================"
-          git diff --stat origin/${{ steps.pr_details.outputs.pr_base_branch }}...${{ steps.pr_details.outputs.pr_head_sha }} || \
-            git diff --stat ${{ steps.pr_details.outputs.pr_base_sha }}...${{ steps.pr_details.outputs.pr_head_sha }}
-          echo "============================================================"
+          gh pr comment ${{ github.event.pull_request.number }} --body-file pr-review.md
 
       # ── 4. Set up Python for the AI review script ─────────────────────────
       - name: Set up Python
